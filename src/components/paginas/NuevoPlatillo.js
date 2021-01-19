@@ -1,11 +1,31 @@
+import { useContext, useState } from "react";
 // leer datos
 import { useFormik } from 'formik';
 // validar form
 import * as Yup from 'yup';
+//basedatos
+import { FirebaseContext } from "../../firebase";
+// redireccionamiento
+import { useNavigate } from 'react-router-dom';
+//libreria para subir archivos
+import FileUploader  from 'react-firebase-file-uploader';
+
 
 
 
 const NuevoPlatillo = () => {
+
+   // state para las imagenes
+   const [subiendo, guardarSubiendo] = useState(false);
+   const [progreso, guardarProgreso ] = useState(0);
+   const [ urlimagen, guardarUrlimagen] = useState('');
+
+  //contex con las operaciones de firebase
+  const { firebase } = useContext(FirebaseContext);
+  // console.log(firebase);
+
+  // Hook para redireccionar
+  const navigate = useNavigate();
 
 
   // validar y leer los datos del formulario
@@ -39,9 +59,47 @@ const NuevoPlatillo = () => {
       
     }),
     onSubmit: datos => {
-      console.log(datos);
+      // console.log(datos);
+      try {
+        datos.existencia = true;
+        firebase.db.collection("productos").add(datos)
+        //redireccionar
+        navigate('/menu');
+      } catch (error) {
+        console.log(error);
+      }
     }
-  })
+  });
+
+  //todo sobre las imagenes
+  // handleUploadStart
+  // handleUploadError
+  // handleUploadSuccess
+  // handleProgress
+  const handleUploadStart = () => {
+    guardarProgreso(0);
+    guardarSubiendo(true);
+  }
+  const handleUploadError = error => {
+    guardarSubiendo(false);
+    console.log(error);
+  }
+  const handleUploadSuccess = nombre => {
+    guardarProgreso(100);
+    guardarSubiendo(false);
+
+    //almacenar la url en firebase
+    const url = firebase.storage.ref("productos").child(nombre).getDownloadURL();
+    console.log(url);
+
+    guardarUrlimagen(url);
+
+  }
+  const handleProgress = progreso => {
+    guardarProgreso(progreso);
+    console.log(progreso);
+  }
+  
 
     return (
       <>
@@ -169,16 +227,21 @@ const NuevoPlatillo = () => {
                  >
                    Imagen
                    </label>
+
+                   <FileUploader 
+                      accept="image/*" //aceptar solo imagen
+                      id="imagen"
+                      name="imagen"
+                      randomizeFilename //genera un nomnbre aleatorio
+                      storageRef={firebase.storage.ref('productos')} //crea la carpeta donde se guardaran los archivos
+                      onUploadStart={handleUploadStart}
+                      onUploadError={handleUploadError}
+                      onUploadSuccess={handleUploadSuccess}
+                      onProgress={handleProgress}
+                   
+                   />
                  
-                 <input 
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    id="imagen"
-                    type="file"
-                    value={formik.values.imagen}
-                    onChange={formik.handleChange}
-                    onBlur={formik.handleBlur}
-                 />
-               
+             
                </div>
 
                <div>
